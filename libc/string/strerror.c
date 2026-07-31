@@ -333,7 +333,10 @@ static const char * const errnames[] = {
 
 #define NERRNAMES (sizeof(errnames) / sizeof(errnames[0]))
 
-char *_user_strerror(int, int, int *) __weak;
+/* Not weak: a weak reference is resolved through the GOT so that it can be tested
+   for absence, and some loaders cannot relocate that. Builds using this fork always
+   provide these.  */
+char *_user_strerror(int, int, int *);
 
 char *
 _strerror_r(int errnum, int internal, int *errptr)
