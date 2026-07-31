@@ -159,8 +159,11 @@ bail:
     return ret;
 }
 
-extern FILE * const stdin __weak;
-extern FILE * const stdout __weak;
+/* Not weak: a weak reference is resolved through the GOT so that it can be tested
+   for absence, and some loaders cannot relocate that. Builds using this fork always
+   provide these.  */
+extern FILE * const stdin;
+extern FILE * const stdout;
 
 int
 __bufio_get(FILE *f)
