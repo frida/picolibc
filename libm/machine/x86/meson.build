@@ -74,13 +74,20 @@ x86_64_code = '''#ifndef __x86_64
 #endif
 '''
 
+x87_code = '''double f(double a) { __asm__("frndint" : "+t" (a)); return a; }
+'''
+
 foreach params : targets
   target = params['name']
   target_dir = params['dir']
   target_c_args = params['c_args']
-  if cc.compiles(x86_64_code,
-                 name: 'x86_64 check',
-                 args: target_c_args + c_args)
+  is_x86_64 = cc.compiles(x86_64_code,
+                          name: 'x86_64 check',
+                          args: target_c_args + c_args)
+  has_x87 = cc.compiles(x87_code,
+                        name: 'x87 check',
+                        args: target_c_args + c_args)
+  if is_x86_64 or not has_x87
     src_libm_machine_target = srcs_libm_machine_common
   else
     src_libm_machine_target = srcs_libm_machine_common + srcs_libm_machine_32
