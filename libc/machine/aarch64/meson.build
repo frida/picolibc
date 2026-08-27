@@ -34,45 +34,55 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-srcs_machine = [
-  'interrupt.c',
-  'interrupt_vector.S',
-  'memchr-stub.c',
-  'memchr.S',
-  'memcmp-stub.c',
-  'memcmp.S',
-  'memcpy-stub.c',
-  'memcpy.S',
-  'memmove-stub.c',
-  'memmove.S',
-  'memrchr-stub.c',
-  'memrchr.S',
-  'memset-stub.c',
-  'memset.S',
-  'rawmemchr-stub.c',
-  'rawmemchr.S',
-  'setjmp.S',
-  'stpcpy-stub.c',
-  'stpcpy.S',
-  'strchr-stub.c',
-  'strchr.S',
-  'strchrnul-stub.c',
-  'strchrnul.S',
-  'strcmp-stub.c',
-  'strcmp.S',
-  'strcpy-stub.c',
-  'strcpy.S',
-  'strlen-stub.c',
-  'strlen.S',
-  'strncmp-stub.c',
-  'strncmp.S',
-  'strnlen-stub.c',
-  'strnlen.S',
-  'strrchr-stub.c',
-  'strrchr.S',
-  'sme-abi.S',
-  'tls.c'
-]
+is_macho = cc.compiles('''#ifndef __MACH__
+                          #error not mach-o
+                          #endif
+                          int main (void) { return 0; }''',
+                       name: 'Mach-O')
+
+if is_macho
+  srcs_machine = ['machine-nothing.c']
+else
+  srcs_machine = [
+    'interrupt.c',
+    'interrupt_vector.S',
+    'memchr-stub.c',
+    'memchr.S',
+    'memcmp-stub.c',
+    'memcmp.S',
+    'memcpy-stub.c',
+    'memcpy.S',
+    'memmove-stub.c',
+    'memmove.S',
+    'memrchr-stub.c',
+    'memrchr.S',
+    'memset-stub.c',
+    'memset.S',
+    'rawmemchr-stub.c',
+    'rawmemchr.S',
+    'setjmp.S',
+    'stpcpy-stub.c',
+    'stpcpy.S',
+    'strchr-stub.c',
+    'strchr.S',
+    'strchrnul-stub.c',
+    'strchrnul.S',
+    'strcmp-stub.c',
+    'strcmp.S',
+    'strcpy-stub.c',
+    'strcpy.S',
+    'strlen-stub.c',
+    'strlen.S',
+    'strncmp-stub.c',
+    'strncmp.S',
+    'strnlen-stub.c',
+    'strnlen.S',
+    'strrchr-stub.c',
+    'strrchr.S',
+    'sme-abi.S',
+    'tls.c'
+  ]
+endif
 
 subdir('machine')
 subdir('sys')
