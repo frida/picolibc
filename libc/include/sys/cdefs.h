@@ -280,7 +280,7 @@
 #define __declare_extern_inline(type) extern __inline type __attribute((gnu_inline, always_inline))
 #endif
 
-#if __has_attribute(__alias__)
+#if __has_attribute(__alias__) && !defined(__MACH__)
 #define __strong_reference(sym, aliassym)                                   \
     extern __typeof(sym) aliassym __attribute__((__alias__(__STRING(sym))))
 #define __strong_reference_dup(sym, aliassym)                                    \
@@ -640,10 +640,18 @@
  * is weak but aliases a strong symbol. A workaround is to make the original
  * symbol weak and the alias symbol will automatically become weak too. */
 /* Hint: use `nm -m obj.o` to check the symbols weak/strong on Mac */
-#define __weak_reference(sym, alias)    \
-    __asm__(".weak_definition _" #sym); \
-    __asm__(".globl _" #alias);         \
-    __asm__(".set _" #alias ", _" #sym)
+#define __MACHO_NAME(x) __MACHO_NAME_SPENT(x)
+#define __MACHO_NAME_SPENT(x) "_" #x
+#define __weak_reference(sym, alias)                       \
+    __asm__(".weak_definition " __MACHO_NAME(sym));        \
+    __asm__(".globl " __MACHO_NAME(alias));                \
+    __asm__(".set " __MACHO_NAME(alias) ", " __MACHO_NAME(sym))
+#ifndef __strong_reference
+#define __strong_reference(sym, aliassym)      \
+    __asm__(".globl " __MACHO_NAME(aliassym)); \
+    __asm__(".set " __MACHO_NAME(aliassym) ", " __MACHO_NAME(sym))
+#define __strong_reference_dup(sym, aliassym) __strong_reference(sym, aliassym)
+#endif
 #elif defined(__STDC__)
 #define __weak_reference(sym, alias)    \
     __asm__(".weak_reference " #alias); \
