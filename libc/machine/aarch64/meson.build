@@ -41,7 +41,10 @@ is_macho = cc.compiles('''#ifndef __MACH__
                        name: 'Mach-O')
 
 if is_macho
-  srcs_machine = ['machine-nothing.c']
+  srcs_machine = [
+    'machine-nothing.c',
+    'setjmp.S',
+  ]
 else
   srcs_machine = [
     'interrupt.c',
