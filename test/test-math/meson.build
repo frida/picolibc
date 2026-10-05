@@ -36,31 +36,60 @@
 tests_real_trig = [
   'test-acos',
   'test-acosh',
+  'test-acospi',
   'test-asin',
   'test-asinh',
+  'test-asinpi',
   'test-atan',
   'test-atan2',
   'test-atanh',
+  'test-atanpi',
+  'test-atan2pi',
   'test-cos',
   'test-cosh',
+  'test-cospi',
   'test-sin',
   'test-sincos-cos',
   'test-sincos-sin',
   'test-sinh',
+  'test-sinpi',
   'test-tan',
-  'test-tanh'
+  'test-tanh',
+  'test-tanpi',
 ]
 
 tests_real_exp = [
+  'test-compoundn',
   'test-exp',
   'test-exp10',
   'test-exp2',
   'test-expm1',
+  'test-exp10m1',
+  'test-exp2m1',
   'test-log',
   'test-log10',
   'test-log1p',
+  'test-log10p1',
+  'test-log2p1',
   'test-log2',
-  'test-pow'
+  'test-pow',
+  'test-pown',
+  'test-powr',
+]
+
+tests_real_narrow = [
+  'test-fadd',
+  'test-fsub',
+  'test-fmul',
+  'test-fdiv',
+  'test-fsqrt',
+  'test-ffma',
+  'test-dadd',
+  'test-dsub',
+  'test-dmul',
+  'test-ddiv',
+  'test-dsqrt',
+  'test-dfma',
 ]
 
 tests_real_other = [
@@ -75,9 +104,13 @@ tests_real_other = [
   'test-j1',
   'test-jn',
   'test-lgamma',
+  'test-nextafter',
+  'test-nextdown',
+  'test-nextup',
   'test-remainder',
   'test-remquo-quo',
   'test-round',
+  'test-roundeven',
   'test-sqrt',
   'test-tgamma'
 ]
@@ -118,15 +151,18 @@ tests_other = [
   'test-scalbn',
   ]
 
-tests = tests_real_trig + tests_real_exp + tests_real_other
+tests = tests_real_trig + tests_real_exp + tests_real_narrow + tests_real_other
 tests += tests_complex_trig + tests_complex_exp + tests_complex_other
 tests += tests_other
 
-functions = [ 'acos', 'acosh', 'asin', 'asinh', 'atan', 'atanh',
-              'cbrt', 'cos', 'cosh', 'erf', 'erfc', 'exp', 'exp10', 'exp2',
-              'expm1', 'j0', 'j1', 'lgamma', 'log', 'log10', 'log1p', 'log2',
-              'sin', 'sincos_cos', 'sincos_sin', 'sinh', 'sqrt', 'tan', 'tanh', 'tgamma', 'y0', 'y1',
-            ]
+functions = [ 'acos', 'acosh', 'acospi', 'asin', 'asinh', 'asinpi',
+              'atan', 'atanh', 'atanpi', 'cbrt', 'ceil', 'cos',
+              'cosh', 'cospi', 'erf', 'erfc', 'exp', 'exp10', 'exp2',
+              'expm1', 'exp10m1', 'exp2m1', 'floor', 'j0', 'j1',
+              'lgamma', 'log', 'log10', 'log1p', 'log2', 'log10p1',
+              'log2p1', 'round', 'roundeven', 'sin', 'sinpi',
+              'sincos_cos', 'sincos_sin', 'sinh', 'sqrt', 'tan',
+              'tanh', 'tanpi', 'tgamma', 'y0', 'y1', ]
 
 test_extra_libs = {}
 
@@ -184,7 +220,7 @@ foreach params : targets
                     link_with: test_extra_libs.get(t1, []),
 		    include_directories: inc),
          depends: bios_bin,
-	 timeout: 60,
+	 timeout: 120,
          suite: 'test-math',
 	 env: test_env)
   endforeach

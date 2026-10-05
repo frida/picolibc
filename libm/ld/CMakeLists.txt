@@ -63,6 +63,8 @@ picolibc_sources(
   s_modfl.c
   s_nanl.c
   s_nextafterl.c
+  s_nextdownl.c
+  s_nextupl.c
   s_nexttoward.c
   s_nexttowardf.c
   s_remquol.c
@@ -87,10 +89,13 @@ picolibc_sources(
   s_fmaxl.c
   s_fminl.c
   s_frexpl.c
+  s_infinityl.c
+  s_iseqsigl.c
   s_isinfl.c
   s_isnanl.c
   s_llrintl.c
   s_llroundl.c
+  s_llogbl.c
   s_logbl.c
   s_lrintl.c
   s_lroundl.c

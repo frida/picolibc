@@ -34,4 +34,5 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 exec "$(dirname "$0")"/do-configure clang-arm-none-eabi-fvp \
-	-Dmultilib-list=arm-none-eabi/armv7a_soft_nofp -Dtests=true -Dtest-machine=fvp "$@"
+     -Dmultilib-include=arm-none-eabi/armv7a -Dmultilib-exclude=unaligned \
+     -Dtests=true -Dtest-machine=fvp "$@"

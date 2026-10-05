@@ -34,6 +34,8 @@
 inc_machine_headers_machine = [
         'fenv.h',
         'fenv-fp.h',
+        '_sched.h',
+        '_clockid.h',
 ]
 
 if really_install

@@ -28,16 +28,6 @@
 
 #include <picolibc.h>
 
-#ifdef __MACH__
-#define SYM(name)		_##name
-#define TYPE_FUNCTION(name)
-#define SIZE_FROM(name)
-#else
-#define SYM(name)		name
-#define TYPE_FUNCTION(name)	.type name, %function
-#define SIZE_FROM(name)		.size name, .-name
-#endif
-
 #define GPR_LAYOUT			\
 	REG_PAIR (x19, x20,  0);	\
 	REG_PAIR (x21, x22, 16);	\
@@ -54,9 +44,9 @@
 	REG_PAIR (d14, d15, 160);
 
 // int setjmp (jmp_buf)
-	.global	SYM(setjmp)
-	TYPE_FUNCTION(SYM(setjmp))
-SYM(setjmp):
+	.global	setjmp
+	.type	setjmp, %function
+setjmp:
 #ifndef __LP64__
 	mov	w0, w0
 #endif
@@ -71,12 +61,12 @@ SYM(setjmp):
 #undef REG_ONE
 	mov	w0, #0
 	ret
-	SIZE_FROM(SYM(setjmp))
+	.size	setjmp, .-setjmp
 
 // void longjmp (jmp_buf, int) __noreturn
-	.global	SYM(longjmp)
-	TYPE_FUNCTION(SYM(longjmp))
-SYM(longjmp):
+	.global	longjmp
+	.type	longjmp, %function
+longjmp:
 #ifndef __LP64__
 	mov	w0, w0
 #endif
@@ -94,4 +84,4 @@ SYM(longjmp):
 	cinc	w0, w1, eq
 	// use br not ret, as ret is guaranteed to mispredict
 	br	x30
-	SIZE_FROM(SYM(longjmp))
+	.size	longjmp, .-longjmp

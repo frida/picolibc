@@ -35,6 +35,7 @@ These options control some general build configuration values.
 | multilib                    | true    | Build every multilib configuration supported by the compiler                         |
 | multilib-list               | <empty> | If non-empty, the set of multilib configurations to compile for                      |
 | multilib-exclude            | <empty> | Multilib configurations containing any of these strings will not be built            |
+| multilib-include            | <empty> | If non-empty, only build multilib configurations containing any of these strings     |
 | b_sanitize=_option list_    | false   | Build the library -fsanitize set to the provided list, e.g. -Db_sanitize=undefined   |
 | sanitize-trap-on-error      | false   | Build the library with -fsanitize-undefined-trap-on-error                            |
 | sanitize-allow-missing      | false   | Don't bail if the selected sanitize option is not supported by the compiler          |
@@ -42,6 +43,8 @@ These options control some general build configuration values.
 | analyzer                    | false   | Enable the analyzer while compiling with -fanalyzer                                  |
 | assert-verbose              | false   | Display file, line and expression in assert() messages                               |
 | fast-strcmp                 | true    | Always optimize strcmp for performance (to make Dhrystone happy)                     |
+| strcmp-pair                 | false   | Use RISC-V paired-word strcmp (dual-issue / fused-load cores)                        |
+| picolibc-export             | true    | Annotate public picolibc APIs with default (exported) visibility                     |
 
 ### Installation options
 

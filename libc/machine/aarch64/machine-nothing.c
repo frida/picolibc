@@ -1,1 +1,0 @@
-int __picolibc_machine_has_nothing_of_its_own;

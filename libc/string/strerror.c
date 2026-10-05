@@ -333,10 +333,7 @@ static const char * const errnames[] = {
 
 #define NERRNAMES (sizeof(errnames) / sizeof(errnames[0]))
 
-/* Not weak: a weak reference is resolved through the GOT so that it can be tested
-   for absence, and some loaders cannot relocate that. Builds using this fork always
-   provide these.  */
-char *_user_strerror(int, int, int *);
+char *_user_strerror(int, int, int *) __weak;
 
 char *
 _strerror_r(int errnum, int internal, int *errptr)
@@ -351,7 +348,7 @@ _strerror_r(int errnum, int internal, int *errptr)
 
     if (!errptr)
         errptr = &errno;
-    if (&_user_strerror == NULL || (error = _user_strerror(errnum, internal, errptr)) == 0)
+    if (&_user_strerror == 0 || (error = _user_strerror(errnum, internal, errptr)) == 0)
         error = "Unknown error";
     return error;
 }

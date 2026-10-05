@@ -81,6 +81,9 @@
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
+#ifndef __has_extension
+#define __has_extension(x) 0
+#endif
 
 /*
  * Attributes.
@@ -89,7 +92,12 @@
  * can be safely replaced with nothing when not supported
  */
 
-#if __has_attribute(__visibility__)
+#if __has_attribute(__visibility__) && defined(__PICOLIBC_EXPORT)
+/* Define __PICOLIBC_EXPORT to force public picolibc symbols to have default (exported) visibility
+ * even when picolibc is built with a more limited default visibility.
+ * This is useful when building picolibc as part of a library while remaining callable
+ * from outside that library.
+ */
 #define __picolibc_export __attribute__((__visibility__("default")))
 #else
 #define __picolibc_export
@@ -280,7 +288,7 @@
 #define __declare_extern_inline(type) extern __inline type __attribute((gnu_inline, always_inline))
 #endif
 
-#if __has_attribute(__alias__) && !defined(__MACH__)
+#if __has_attribute(__alias__)
 #define __strong_reference(sym, aliassym)                                   \
     extern __typeof(sym) aliassym __attribute__((__alias__(__STRING(sym))))
 #define __strong_reference_dup(sym, aliassym)                                    \
@@ -376,36 +384,123 @@
 #if __has_builtin(__builtin_isnanl)
 #define __HAVE_BUILTIN_ISNANL 1
 #endif
-#if __has_builtin(__builtin_issignalingl)
-#define __HAVE_BUILTIN_ISSIGNALINGL 1
+#if __has_builtin(__builtin_issignaling)
+#define __HAVE_BUILTIN_ISSIGNALING 1
 #endif
 #if __has_builtin(__builtin_mul_overflow)
 #define __HAVE_BUILTIN_MUL_OVERFLOW 1
 #endif
+#if __has_builtin(__builtin_stdc_bit_width)
+#define __HAVE_BUILTIN_STDC_BIT_WIDTH 1
+#endif
+#if __has_builtin(__builtin_constant_p)
+#define __HAVE_BUILTIN_CONSTANT_P 1
+#endif
+#if __has_builtin(__builtin_align_up)
+#define __HAVE_BUILTIN_ALIGN_UP 1
+#endif
+#if __has_builtin(__builtin_align_down)
+#define __HAVE_BUILTIN_ALIGN_DOWN 1
+#endif
+#if __has_builtin(__builtin_is_aligned)
+#define __HAVE_BUILTIN_IS_ALIGNED 1
+#endif
+#if __has_builtin(__builtin_expect)
+#define __HAVE_BUILTIN_EXPECT 1
+#endif
+#if __has_builtin(__builtin_unreachable)
+#define __HAVE_BUILTIN_UNREACHABLE 1
+#endif
 
-#if !__has_builtin(__builtin_expect)
+/*
+ * Provide some optimizing builtins; these don't affect the sematics
+ * of the generated code, they just guide optimization.
+ */
+#if !__HAVE_BUILTIN_EXPECT
 #define __builtin_expect(cond, exp) (cond)
 #endif
-#if !__has_builtin(__builtin_unreachable)
+
+#if !__HAVE_BUILTIN_UNREACHABLE
 #define __builtin_unreachable()
 #endif
 
 /* Alignment builtins for better type checking and improved code generation. */
 /* Provide fallback versions for other compilers (GCC/Clang < 10): */
-#if !__has_builtin(__builtin_is_aligned)
-#define __builtin_is_aligned(x, align) (((__uintptr_t)x & ((align) - 1)) == 0)
-#endif
-#if !__has_builtin(__builtin_align_up)
-#define __builtin_align_up(x, align)                                         \
+
+#if __HAVE_BUILTIN_ALIGN_UP
+#define __align_up(x, y) __builtin_align_up(x, y)
+#else
+#define __align_up(x, align)                                                 \
     ((__typeof__(x))(((__uintptr_t)(x) + ((align) - 1)) & (~((align) - 1))))
 #endif
-#if !__has_builtin(__builtin_align_down)
-#define __builtin_align_down(x, align) ((__typeof__(x))((x) & (~((align) - 1))))
+
+#if __HAVE_BUILTIN_ALIGN_DOWN
+#define __align_down(x, y) __builtin_align_down(x, y)
+#else
+#define __align_down(x, align) ((__typeof__(x))((x) & (~((align) - 1))))
 #endif
 
-#define __align_up(x, y)   __builtin_align_up(x, y)
-#define __align_down(x, y) __builtin_align_down(x, y)
+#if __HAVE_BUILTIN_IS_ALIGNED
 #define __is_aligned(x, y) __builtin_is_aligned(x, y)
+#else
+#define __is_aligned(x, align) (((__uintptr_t)x & ((align) - 1)) == 0)
+#endif
+
+/*
+ * __picolibc_bit_width returns the 'width' of its operand, which is
+ * one plus the bit position of the highest bit set in the value.
+ *
+ * This matches __builtin_stdc_bit_width, but with the type limited to
+ * size_t. There are four implementations based upon what builtins the
+ * compiler provides.
+ */
+#ifdef __HAVE_BUILTIN_STDC_BIT_WIDTH
+
+#define __picolibc_bit_width(a) __builtin_stdc_bit_width(a)
+
+#elif defined(__HAVE_BUILTIN_CLZG)
+
+static inline unsigned int
+__picolibc_bit_width(size_t a)
+{
+    unsigned int prec = sizeof(a) * 8;
+    return (unsigned int)(prec - __builtin_clzg(a, prec));
+}
+
+#elif defined(__HAVE_BUILTIN_CLZ) && __SIZEOF_SIZE_T__ == __SIZEOF_INT__
+
+static inline unsigned int
+__picolibc_bit_width(__SIZE_TYPE__ a)
+{
+    if (a == 0)
+        return 0;
+    return (unsigned int)(sizeof(a) * 8 - __builtin_clz(a));
+}
+
+#elif defined(__HAVE_BUILTIN_CLZL) && __SIZEOF_SIZE_T__ == __SIZEOF_LONG__
+
+static inline unsigned int
+__picolibc_bit_width(__SIZE_TYPE__ a)
+{
+    if (a == 0)
+        return 0;
+    return (unsigned int)(sizeof(a) * 8 - __builtin_clzl(a));
+}
+
+#else
+
+static inline unsigned int
+__picolibc_bit_width(__SIZE_TYPE__ a)
+{
+    unsigned int width = 0;
+    while (a) {
+        width++;
+        a >>= 1;
+    }
+    return width;
+}
+
+#endif
 
 #ifdef __HAVE_BUILTIN_ADD_OVERFLOW
 #define __picolibc_add_overflow(a, b, c) __builtin_add_overflow(a, b, c)
@@ -640,18 +735,10 @@
  * is weak but aliases a strong symbol. A workaround is to make the original
  * symbol weak and the alias symbol will automatically become weak too. */
 /* Hint: use `nm -m obj.o` to check the symbols weak/strong on Mac */
-#define __MACHO_NAME(x) __MACHO_NAME_SPENT(x)
-#define __MACHO_NAME_SPENT(x) "_" #x
-#define __weak_reference(sym, alias)                       \
-    __asm__(".weak_definition " __MACHO_NAME(sym));        \
-    __asm__(".globl " __MACHO_NAME(alias));                \
-    __asm__(".set " __MACHO_NAME(alias) ", " __MACHO_NAME(sym))
-#ifndef __strong_reference
-#define __strong_reference(sym, aliassym)      \
-    __asm__(".globl " __MACHO_NAME(aliassym)); \
-    __asm__(".set " __MACHO_NAME(aliassym) ", " __MACHO_NAME(sym))
-#define __strong_reference_dup(sym, aliassym) __strong_reference(sym, aliassym)
-#endif
+#define __weak_reference(sym, alias)    \
+    __asm__(".weak_definition _" #sym); \
+    __asm__(".globl _" #alias);         \
+    __asm__(".set _" #alias ", _" #sym)
 #elif defined(__STDC__)
 #define __weak_reference(sym, alias)    \
     __asm__(".weak_reference " #alias); \

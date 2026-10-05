@@ -1,7 +1,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# Copyright © 2019-2021 Keith Packard
+# Copyright © 2019-2026 Keith Packard
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ project('picolibc', 'c',
 	],
 	license : 'BSD',
 	meson_version : '>= 0.61',
-	version: '1.8.11'
+	version: '1.8.12'
        )
 
 # When picolibc is embedded as a subproject you probably don't expect
@@ -127,6 +127,7 @@ endif
 enable_multilib = get_option('multilib')
 multilib_list = get_option('multilib-list')
 multilib_exclude = get_option('multilib-exclude')
+multilib_include = get_option('multilib-include')
 enable_picocrt = get_option('picocrt')
 enable_picocrt_lib = get_option('picocrt-lib')
 picocrt_enable_mmu = get_option('picocrt-enable-mmu')
@@ -455,11 +456,18 @@ endif
 # test_c_args       target test C code
 # test_cpp_args     target test C++ code
 
+global_link_args = []
+foreach ld : ['-Wl,--no-warn-rwx-segments', '-Wl,--no-fatal-warnings', '-Wl,-znoexecstack']
+  if cc.has_multi_link_arguments(link_test_args + [ld])
+    global_link_args += [ld]
+  endif
+endforeach
+
 # Get additional flags used for linking tests.
 
-test_link_args_base = runtime_lib
+test_link_args_base = runtime_lib + global_link_args
 
-test_link_args_extra = ['-Wl,--gc-sections', '-Wl,--no-warn-rwx-segments']
+test_link_args_extra = ['-Wl,--gc-sections']
 
 if profile
   test_link_args_extra += ['-pg']
@@ -474,6 +482,7 @@ foreach ld : test_link_args_extra
 endforeach
 
 fast_strcmp = get_option('fast-strcmp')
+strcmp_pair = get_option('strcmp-pair')
 
 mb_capable = get_option('mb-capable')
 mb_extended_charsets = mb_capable and get_option('mb-extended-charsets')
@@ -670,12 +679,14 @@ endif
 # CompCert does not support bitfields in packed structs, so avoid using this optimization
 bitfields_in_packed_structs_code = '''
 struct test { int part: 24; } __attribute__((packed));
+unsigned int foobar (const struct test *p);
 unsigned int foobar (const struct test *p) { return p->part; }
 '''
 have_bitfields_in_packed_structs = cc.compiles(bitfields_in_packed_structs_code, name : 'packed structs may contain bitfields', args: c_args)
 
 # CompCert does not support _Complex
 complex_code = '''
+float _Complex test(float _Complex z);
 float _Complex test(float _Complex z) { return z; }
 '''
 have_complex = cc.compiles(complex_code, name : 'supports _Complex', args: c_args)
@@ -718,14 +729,23 @@ if enable_multilib
   foreach target : target_list
     tmp = target.split(';')
     matches_exclude = false
+    if multilib_include != []
+      matches_exclude = true
+      foreach include : multilib_include
+        if tmp[0].contains(include)
+          matches_exclude = false
+          break
+        endif
+      endforeach
+    endif
     foreach exclude : multilib_exclude
       if tmp[0].contains(exclude)
         matches_exclude = true
-        message('skipping target ' + tmp[0])
         break
       endif
     endforeach
     if matches_exclude
+      message('skipping target ' + tmp[0])
       continue
     endif
 
@@ -1415,6 +1435,14 @@ if not have_has_builtin
     ['builtin_ctz', '__builtin_ctz((unsigned int)42)', 'int'],
     ['builtin_ctzl', '__builtin_ctzl((unsigned long)42)', 'int'],
     ['builtin_ctzll', '__builtin_ctzll((unsigned long long)42)', 'int'],
+    ['builtin_stdc_bit_width', '__builtin_stdc_bit_width(42U)', 'unsigned int'],
+    ['builtin_clzg', '__builtin_clzg(42U, 8*sizeof(42U))', 'unsigned int'],
+    ['builtin_clz', '__builtin_clz(42U)', 'int'],
+    ['builtin_clzl', '__builtin_clzl(42UL)', 'int'],
+    ['builtin_constant_p', '__builtin_constant_p(1)', 'int'],
+    ['builtin_align_up', '__builtin_align_up((unsigned) 1, (unsigned) 8)', 'unsigned'],
+    ['builtin_align_down', '__builtin_align_down((unsigned) 15, (unsigned) 8)', 'unsigned'],
+    ['builtin_is_aligned', '__builtin_is_aligned((unsigned) 4, (unsigned) 2)', 'int'],
     ['builtin_copysignl', '__builtin_copysignl((long double)42, (long double) 42)', 'long double'],
     ['builtin_copysign', '__builtin_copysign(42, 42)', 'double'],
     ['builtin_isinfl', '__builtin_isinfl((long double)42)', 'int'],
@@ -1423,19 +1451,27 @@ if not have_has_builtin
     ['builtin_isnan', '__builtin_isnan((long double)42)', 'int'],
     ['builtin_finitel', '__builtin_finitel((long double)42)', 'int'],
     ['builtin_isfinite', '__builtin_isfinite((long double)42)', 'int'],
-    ['builtin_issignalingl', '__builtin_issignalingl((long double)42)', 'int'],
+    ['builtin_issignaling', '__builtin_issignaling((long double)42)', 'int'],
     ['builtin_mul_overflow', '__builtin_mul_overflow(1, 2, &u)', 'int'],
     ['builtin_add_overflow', '__builtin_add_overflow(1, 2, &u)', 'int'],
-    ['builtin_expect', '__builtin_expect(1 > 0)', 'int'],
+    ['builtin_expect', '__builtin_expect(1 > 0, 1)', 'int'],
+    ['builtin_unreachable', 'if (0) __builtin_unreachable();', 'void'],
   ]
 endif
 
 foreach builtin : builtins
-  builtin_template='''
-static int foo(@1@ i __attribute__((unused))) { return 0; }
-unsigned u;
-int main(void) { return foo(@0@); }
-'''
+  if builtin[2] == 'void'
+    builtin_template='''
+        int main(void) { @0@; return 0; }
+        '''
+  else
+    builtin_template='''
+        static int foo(@1@ i __attribute__((unused))) { return 0; }
+        unsigned u;
+        int main(void) { return foo(@0@); }
+        '''
+  endif
+
   builtin_code = builtin_template.format(builtin[1], builtin[2])
   have_current_builtin = cc.links(builtin_code, name : 'test for __' + builtin[0], args: c_args)
   if have_current_builtin
@@ -1478,6 +1514,7 @@ conf_data.set('__IEEE_LIBM', not get_option('want-math-errno'), description: 'ma
 conf_data.set('__MATH_ERRNO', get_option('want-math-errno'), description: 'math library sets errno')
 conf_data.set('__PREFER_SIZE_OVER_SPEED', get_option('optimization') == 's', description: 'Optimize for space over speed')
 conf_data.set('__FAST_STRCMP', fast_strcmp, description: 'Always optimize strcmp for performance')
+conf_data.set('__STRCMP_PAIR', strcmp_pair, description: 'Use RISC-V paired-word strcmp')
 conf_data.set('__GLOBAL_ERRNO', get_option('newlib-global-errno'), description: 'use global errno variable')
 conf_data.set('__INIT_FINI_ARRAY', get_option('initfini-array'), description: 'Support INIT_ARRAY linker sections')
 conf_data.set('__INIT_FINI_FUNCS', get_option('initfini'), description: 'Support _init() and _fini() functions')
@@ -1488,6 +1525,8 @@ conf_data.set('__THREAD_LOCAL_STORAGE_RP2040', get_option('tls-rp2040'),
 conf_data.set('__THREAD_LOCAL_STORAGE_STACK_GUARD', tls_stack_guard, description: 'use thread local storage for stack protection canary')
 conf_data.set('__HAVE_BITFIELDS_IN_PACKED_STRUCTS', have_bitfields_in_packed_structs, description: 'Use bitfields in packed structs')
 conf_data.set('__HAVE_COMPLEX', have_complex, description: 'Compiler supports _Complex')
+conf_data.set('__PICOLIBC_EXPORT', get_option('picolibc-export'),
+              description: 'Annotate public picolibc APIs with default (exported) visibility')
 
 conf_data.set('__MB_CAPABLE', mb_capable)
 if mb_capable
@@ -1741,6 +1780,8 @@ if get_option('test-long-double')
   test_c_args += ['-D_TEST_LONG_DOUBLE']
   native_c_args += ['-D_TEST_LONG_DOUBLE']
 endif
+
+native_c_args += ['-Wl,--no-fatal-warnings']
 
 test_env = environment()
 test_env.prepend('PATH', meson.current_source_dir() / 'scripts')
